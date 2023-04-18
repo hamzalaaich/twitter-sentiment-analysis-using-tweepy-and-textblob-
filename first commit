@@ -1,0 +1,62 @@
+# Import necessary libraries
+import tweepy
+from textblob import TextBlob
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Enter your Twitter API keys
+consumer_key = 'YOUR_CONSUMER_KEY'
+consumer_secret = 'YOUR_CONSUMER_SECRET'
+access_token = 'YOUR_ACCESS_TOKEN'
+access_token_secret = 'YOUR_ACCESS_TOKEN_SECRET'
+
+# Authenticate the API keys
+auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+auth.set_access_token(access_token, access_token_secret)
+
+# Create the API object
+api = tweepy.API(auth)
+
+# Define the topic and number of tweets to analyze
+topic = "COVID-19"
+tweet_count = 1000
+
+# Create an empty dataframe to store the tweet data
+tweet_df = pd.DataFrame(columns=['tweet', 'polarity', 'subjectivity'])
+
+# Retrieve the tweets
+tweets = tweepy.Cursor(api.search_tweets,
+              q=topic,
+              lang="en").items(tweet_count)
+
+# Analyze the polarity and subjectivity of each tweet
+for tweet in tweets:
+    analysis = TextBlob(tweet.text)
+    polarity = analysis.sentiment.polarity
+    subjectivity = analysis.sentiment.subjectivity
+    tweet_df = tweet_df.append({'tweet': tweet.text, 'polarity': polarity, 'subjectivity': subjectivity}, ignore_index=True)
+
+# Calculate the average polarity and subjectivity of the tweets
+avg_polarity = tweet_df['polarity'].mean()
+avg_subjectivity = tweet_df['subjectivity'].mean()
+
+# Print the sentiment analysis results
+if avg_polarity > 0:
+    print("The overall sentiment for", topic, "is Positive")
+elif avg_polarity < 0:
+    print("The overall sentiment for", topic, "is Negative")
+else:
+    print("The overall sentiment for", topic, "is Neutral")
+    
+# Plot the polarity and subjectivity distribution of the tweets
+fig, ax = plt.subplots(figsize=(8, 6))
+tweet_df['polarity'].hist(ax=ax, bins=20, alpha=0.5, label='Polarity')
+tweet_df['subjectivity'].hist(ax=ax, bins=20, alpha=0.5, label='Subjectivity')
+ax.legend()
+ax.set_title('Sentiment Analysis Results for {}'.format(topic))
+ax.set_xlabel('Sentiment')
+ax.set_ylabel('Frequency')
+plt.show()
+
+# Save the tweet data to a CSV file
+tweet_df.to_csv('{}_tweets.csv'.format(topic), index=False)
